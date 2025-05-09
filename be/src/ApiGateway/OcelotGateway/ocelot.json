@@ -1,0 +1,422 @@
+{
+  "Routes": [
+    // Auth
+    {
+      "DownstreamPathTemplate": "/api/auth/{everything}",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "authservice",
+          "Port": 8081
+        }
+      ],
+      "UpstreamPathTemplate": "/gateway/auth/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST" ],
+      //"DangerousAcceptAnyServerCertificateValidator": true,
+      "RateLimitOptions": {
+        "ClientWhitelist": [],
+        "EnableRateLimiting": true,
+        "Period": "10s",
+        "PeriodTimespan": 1,
+        "Limit": 1
+      },
+      "FileCacheOptions": {
+        "TtlSeconds": 15,
+        "Region": "Auth"
+      },
+      "LoadBalancerOptions": {
+        "Type": "LeastConnection"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 2,
+        "DurationOfBreak": 5000,
+        "TimeoutValue": 10000
+      }
+    },
+
+    // OAuth
+    {
+      "DownstreamPathTemplate": "/api/oauth/{everything}",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "authservice",
+          "Port": 8081
+        }
+      ],
+      "UpstreamPathTemplate": "/gateway/oauth/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST" ],
+      //"DangerousAcceptAnyServerCertificateValidator": true,
+      "RateLimitOptions": {
+        "ClientWhitelist": [],
+        "EnableRateLimiting": true,
+        "Period": "10s",
+        "PeriodTimespan": 1,
+        "Limit": 1
+      },
+      "FileCacheOptions": {
+        "TtlSeconds": 15,
+        "Region": "OAuth"
+      },
+      "LoadBalancerOptions": {
+        "Type": "LeastConnection"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 2,
+        "DurationOfBreak": 5000,
+        "TimeoutValue": 10000
+      }
+    },
+
+    // Account
+    {
+      "DownstreamPathTemplate": "/api/account/{everything}",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "authservice",
+          "Port": 8081
+        }
+      ],
+      "UpstreamPathTemplate": "/gateway/account/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
+      //"DangerousAcceptAnyServerCertificateValidator": true,
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+        //"AllowedScopes": []
+      },
+      "DownstreamHeaderTransform": {
+        "Authorization": "{Request.Headers.Authorization}"
+      },
+      "RateLimitOptions": {
+        "ClientWhitelist": [],
+        "EnableRateLimiting": true,
+        "Period": "10s",
+        "PeriodTimespan": 1,
+        "Limit": 1
+      },
+      "FileCacheOptions": {
+        "TtlSeconds": 15,
+        "Region": "Account"
+      },
+      "LoadBalancerOptions": {
+        "Type": "LeastConnection"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 2,
+        "DurationOfBreak": 5000,
+        "TimeoutValue": 10000
+      }
+    },
+
+    // Product (GET)
+    {
+      "DownstreamPathTemplate": "/api/product/all",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "productservice",
+          "Port": 8081
+        }
+      ],
+      "UpstreamPathTemplate": "/gateway/product/all",
+      "UpstreamHttpMethod": [ "GET" ],
+      //"DangerousAcceptAnyServerCertificateValidator": true,
+      "RateLimitOptions": {
+        "ClientWhitelist": [],
+        "EnableRateLimiting": true,
+        "Period": "10s",
+        "PeriodTimespan": 1,
+        "Limit": 1
+      },
+      "FileCacheOptions": {
+        "TtlSeconds": 15,
+        "Region": "Product"
+      },
+      "LoadBalancerOptions": {
+        "Type": "LeastConnection"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 2,
+        "DurationOfBreak": 5000,
+        "TimeoutValue": 10000
+      }
+    },
+
+    // Product by ID (POST)
+    {
+      "DownstreamPathTemplate": "/api/product/create",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "productservice",
+          "Port": 8081
+        }
+      ],
+      "UpstreamPathTemplate": "/gateway/product/create",
+      "UpstreamHttpMethod": [ "POST" ],
+      //"DangerousAcceptAnyServerCertificateValidator": true,
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+        //"AllowedScopes": []
+      },
+      "DownstreamHeaderTransform": {
+        "Authorization": "{Request.Headers.Authorization}"
+      }
+    },
+
+    // Product by ID (PUT)
+    {
+      "DownstreamPathTemplate": "/api/product/update",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "productservice",
+          "Port": 8081
+        }
+      ],
+      "UpstreamPathTemplate": "/gateway/product/update",
+      "UpstreamHttpMethod": [ "PUT" ],
+      //"DangerousAcceptAnyServerCertificateValidator": true,
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+        //"AllowedScopes": []
+      },
+      "DownstreamHeaderTransform": {
+        "Authorization": "{Request.Headers.Authorization}"
+      }
+    },
+
+    // Product by ID (DELETE)
+    {
+      "DownstreamPathTemplate": "/api/product/delete",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "productservice",
+          "Port": 8081
+        }
+      ],
+      "UpstreamPathTemplate": "/gateway/product/delete",
+      "UpstreamHttpMethod": [ "DELETE" ],
+      //"DangerousAcceptAnyServerCertificateValidator": true,
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+        //"AllowedScopes": []
+      },
+      "DownstreamHeaderTransform": {
+        "Authorization": "{Request.Headers.Authorization}"
+      }
+    },
+
+    // Product by ID (GET)
+    {
+      "DownstreamPathTemplate": "/api/product/detail",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "productservice",
+          "Port": 8081
+        }
+      ],
+      "UpstreamPathTemplate": "/gateway/product/detail",
+      "UpstreamHttpMethod": [ "GET" ],
+      "DangerousAcceptAnyServerCertificateValidator": true
+    },
+
+    // Stock
+    {
+      "DownstreamPathTemplate": "/api/stock/{everything}",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "productservice",
+          "Port": 8081
+        }
+      ],
+      "UpstreamPathTemplate": "/gateway/stock/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
+      //"DangerousAcceptAnyServerCertificateValidator": true,
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+        //"AllowedScopes": []
+      },
+      "DownstreamHeaderTransform": {
+        "Authorization": "{Request.Headers.Authorization}"
+      },
+      "RateLimitOptions": {
+        "ClientWhitelist": [],
+        "EnableRateLimiting": true,
+        "Period": "10s",
+        "PeriodTimespan": 1,
+        "Limit": 1
+      },
+      "FileCacheOptions": {
+        "TtlSeconds": 15,
+        "Region": "Stock"
+      },
+      "LoadBalancerOptions": {
+        "Type": "LeastConnection"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 2,
+        "DurationOfBreak": 5000,
+        "TimeoutValue": 10000
+      }
+    },
+
+    // Warehouse
+    {
+      "DownstreamPathTemplate": "/api/warehouse/warehouses",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "productservice",
+          "Port": 8081
+        }
+      ],
+      "UpstreamPathTemplate": "/gateway/warehouse/warehouses",
+      "UpstreamHttpMethod": [ "GET" ],
+      //"DangerousAcceptAnyServerCertificateValidator": true,
+      "RateLimitOptions": {
+        "ClientWhitelist": [],
+        "EnableRateLimiting": true,
+        "Period": "10s",
+        "PeriodTimespan": 1,
+        "Limit": 1
+      },
+      "FileCacheOptions": {
+        "TtlSeconds": 15,
+        "Region": "Warehouse"
+      },
+      "LoadBalancerOptions": {
+        "Type": "LeastConnection"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 2,
+        "DurationOfBreak": 5000,
+        "TimeoutValue": 10000
+      }
+    },
+
+    // Category (GET)
+    {
+      "DownstreamPathTemplate": "/api/category/all",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "productservice",
+          "Port": 8081
+        }
+      ],
+      "UpstreamPathTemplate": "/gateway/category/all",
+      "UpstreamHttpMethod": [ "GET" ],
+      //"DangerousAcceptAnyServerCertificateValidator": true,
+      "RateLimitOptions": {
+        "ClientWhitelist": [],
+        "EnableRateLimiting": true,
+        "Period": "10s",
+        "PeriodTimespan": 1,
+        "Limit": 1
+      },
+      "FileCacheOptions": {
+        "TtlSeconds": 15,
+        "Region": "Category"
+      },
+      "LoadBalancerOptions": {
+        "Type": "LeastConnection"
+      },
+      "QoSOptions": {
+        "ExceptionsAllowedBeforeBreaking": 2,
+        "DurationOfBreak": 5000,
+        "TimeoutValue": 10000
+      }
+    },
+
+    // Category by ID (POST)
+    {
+      "DownstreamPathTemplate": "/api/category/create",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "productservice",
+          "Port": 8081
+        }
+      ],
+      "UpstreamPathTemplate": "/gateway/category/create",
+      "UpstreamHttpMethod": [ "POST" ],
+      //"DangerousAcceptAnyServerCertificateValidator": true,
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+        //"AllowedScopes": []
+      },
+      "DownstreamHeaderTransform": {
+        "Authorization": "{Request.Headers.Authorization}"
+      }
+    },
+
+    // Category by ID (PUT)
+    {
+      "DownstreamPathTemplate": "/api/category/update",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "productservice",
+          "Port": 8081
+        }
+      ],
+      "UpstreamPathTemplate": "/gateway/category/update",
+      "UpstreamHttpMethod": [ "PUT" ],
+     // "DangerousAcceptAnyServerCertificateValidator": true,
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+        //"AllowedScopes": []
+      },
+      "DownstreamHeaderTransform": {
+        "Authorization": "{Request.Headers.Authorization}"
+      }
+    },
+
+    // Category by ID (DELETE)
+    {
+      "DownstreamPathTemplate": "/api/category/delete",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "productservice",
+          "Port": 8081
+        }
+      ],
+      "UpstreamPathTemplate": "/gateway/category/delete",
+      "UpstreamHttpMethod": [ "DELETE" ],
+      //"DangerousAcceptAnyServerCertificateValidator": true,
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+        //"AllowedScopes": []
+      },
+      "DownstreamHeaderTransform": {
+        "Authorization": "{Request.Headers.Authorization}"
+      }
+    },
+
+    // Category by ID (GET)
+    {
+      "DownstreamPathTemplate": "/api/category/detail",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "productservice",
+          "Port": 8081
+        }
+      ],
+      "UpstreamPathTemplate": "/gateway/category/detail",
+      "UpstreamHttpMethod": [ "GET" ],
+      //"DangerousAcceptAnyServerCertificateValidator": true
+    }
+  ],
+  "GlobalConfiguration": {
+    "BaseUrl": "https://localhost:6001"
+  }
+}
+
+

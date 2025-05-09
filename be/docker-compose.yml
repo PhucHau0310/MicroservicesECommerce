@@ -1,0 +1,410 @@
+# version: '3'
+
+services:
+  ######################## MONITORING ########################
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+      - ./src/Monitoring/Monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - elk
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - elk
+
+  ######################## ELK STACK ########################
+  elasticsearch:
+    image: "docker.elastic.co/elasticsearch/elasticsearch:8.17.2"
+    container_name: elasticsearch
+    environment:
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - "discovery.type=single-node"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - elk
+
+  kibana:
+    image: "docker.elastic.co/kibana/kibana:8.17.2"
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_SERVICEACCOUNTTOKEN=AAEAAWVsYXN0aWMva2liYW5hL215LXRva2VuOnBDNU0tS1ZWUXdpWmRkdXR5SzQ0Z1E
+      - XPACK_SECURITY_ENCRYPTIONKEY=43be27d80d48a38211a7861e2b6c51287ebf83b9e87cd736dc83d7bc04171a8f
+      - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=43be27d80d48a38211a7861e2b6c51287ebf83b9e87cd736dc83d7bc04171a8f
+      - XPACK_REPORTING_ENCRYPTIONKEY=43be27d80d48a38211a7861e2b6c51287ebf83b9e87cd736dc83d7bc04171a8f
+      - XPACK_SECURITY_SECURE_COOKIES=true 
+    depends_on:
+      - elasticsearch
+    networks:
+      - elk
+
+  filebeat:
+    image: "docker.elastic.co/beats/filebeat:8.17.2"
+    container_name: filebeat
+    user: root
+    entrypoint: "filebeat -e --strict.perms=false"
+    volumes:
+      - ./src/ElasticStack/Elk/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - elk
+
+  node_exporter:
+    image: prom/node-exporter:latest
+    container_name: node_exporter
+    ports:
+      - "9100:9100"
+    networks:
+      - elk
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    ports:
+      - "8080:8080"
+    networks:
+      - elk
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+
+  ######################## OCELOT ########################
+  ocelotgateway:
+    image: ${DOCKER_REGISTRY-}ocelotgateway
+    container_name: ocelotgateway
+    build:
+      context: .
+      dockerfile: src/ApiGateway/OcelotGateway/Dockerfile
+      # context: src/ApiGateway/OcelotGateway
+      # dockerfile: Dockerfile
+    ports:
+      - '6000:8080'
+      - '6001:8081'
+    volumes:
+      - ./src/ApiGateway/OcelotGateway/https:/https
+    networks:
+      - elk
+
+  ######################## AUTH SERVICE ########################
+  authservice:
+    image: ${DOCKER_REGISTRY-}authservice
+    container_name: authservice
+    build:
+      context: .
+      dockerfile: src/Services/AuthService/AuthService/Dockerfile
+      # context: src/Services/AuthService/AuthService
+      # dockerfile: Dockerfile
+    ports:
+      - '6002:8080'
+      - '6003:8081'
+    volumes:
+      - ./src/Services/AuthService/AuthService/https:/https 
+    environment:
+      - 'DatabaseSettings__DefaultConnection=Server=sqlserverauth;Database=AuthService-Microservices;User Id=sa;Password=Hau2004@;TrustServerCertificate=true'
+      - RabbitMQ__HostName=rabbitmq
+      - RabbitMQ__Username=admin
+      - RabbitMQ__Password=admin
+    depends_on:
+      - sqlserverauth
+      - rabbitmq
+    networks:
+      - elk
+
+  rabbitmq:
+    image: rabbitmq:3.11.11-management
+    container_name: rabbitmq-auth
+    restart: always
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=admin
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - elk
+
+  sqlserverauth:
+    container_name: sqlserver-auth
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=Hau2004@
+    ports:
+      - '1433:1433'
+    restart: always
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    networks:
+      - elk
+
+  ######################## PRODUCT SERVICE ########################
+  productservice:
+    image: ${DOCKER_REGISTRY-}productservice
+    build:
+      # context: src/Services/ProductService/ProductService
+      # dockerfile: Dockerfile
+      context: .
+      dockerfile: src/Services/ProductService/ProductService/Dockerfile
+    ports:
+      - '6004:8080'
+      - '6005:8081'
+    volumes:
+      - ./src/Services/ProductService/ProductService/https:/https 
+    environment:
+      - 'DatabaseSettings__DefaultConnection=Server=sqlserverproduct;Database=ProductService-Microservices;User Id=sa;Password=Hau2004@;TrustServerCertificate=true'
+    networks:
+      - elk
+    depends_on:
+      - sqlserverproduct
+
+  sqlserverproduct:
+    container_name: sqlserverproduct
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=Hau2004@
+    ports:
+      - '1434:1433'
+    networks:
+      - elk
+    restart: always
+    volumes:
+      - sqlserver_product_data:/var/opt/mssql
+
+  ######################## ORDER SERVICE ########################
+  orderservice:
+    image: ${DOCKER_REGISTRY-}orderservice
+    build:
+      # context: src/Services/OrderService/OrderService
+      # dockerfile: Dockerfile
+      context: .
+      dockerfile: src/Services/OrderService/OrderService/Dockerfile
+    ports:
+      - '6006:8080'
+      - '6007:8081'
+    volumes:
+      - ./src/Services/OrderService/OrderService/https:/https 
+    environment:
+      - ConnectionStrings__MongoDb=mongodb://nguyen_hau:Hau2004%40@mongodborder:27017/OrderService-Microservices?authSource=admin
+      - RabbitMQ__HostName=rabbitmq
+      - RabbitMQ__Username=admin
+      - RabbitMQ__Password=admin
+    networks:
+      - elk
+    depends_on:
+      - mongodborder
+      - rabbitmq
+
+  mongodborder:
+    image: mongo:latest
+    container_name: mongodborder
+    restart: always
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=nguyen_hau
+      - MONGO_INITDB_ROOT_PASSWORD=Hau2004@
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongodb_order_data:/data/db
+    networks:
+      - elk
+
+  ######################## CART SERVICE ########################    
+  cartservice:
+    image: ${DOCKER_REGISTRY-}cartservice
+    build:
+      # context: src/Services/CartService/CartService
+      # dockerfile: Dockerfile
+      context: .
+      dockerfile: src/Services/CartService/CartService/Dockerfile
+    ports:
+      - '6008:8080'
+      - '6009:8081'
+    volumes:
+      - ./src/Services/CartService/CartService/https:/https 
+    networks:
+      - elk
+    depends_on:
+      - rediscart
+    environment:
+      - REDIS_HOST=rediscart
+      - REDIS_PORT=6379
+
+  rediscart:
+    image: redis:latest
+    container_name: rediscart
+    restart: always
+    ports:
+      - '6379:6379'
+    networks:
+      - elk
+    command: ['redis-server', '--appendonly', 'yes'] 
+
+  ######################## PAYMENT SERVICE ########################
+  paymentservice:
+    image: ${DOCKER_REGISTRY-}paymentservice
+    build:
+      # context: src/Services/PaymentService/PaymentService
+      # dockerfile: Dockerfile
+      context: .
+      dockerfile: src/Services/PaymentService/PaymentService/Dockerfile
+    ports:
+      - '6010:8080'
+      - '6011:8081'
+    volumes:
+      - ./src/Services/PaymentService/PaymentService/https:/https 
+    networks:
+      - elk
+    depends_on:
+      - postgresqlpayment
+      - rabbitmq
+    environment:
+      - ConnectionStrings__Postgres=Host=postgresqlpayment;Port=5432;Database=PaymentService-Microservices;Username=postgres;Password=03102004;
+      - RabbitMQ__HostName=rabbitmq
+      - RabbitMQ__Username=admin
+      - RabbitMQ__Password=admin
+
+  postgresqlpayment:
+    image: postgres:15
+    container_name: postgresqlpayment
+    restart: always
+    environment:
+      - POSTGRES_DB=PaymentService-Microservices
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=03102004
+    ports:
+      - '5433:5432'
+    networks:
+      - elk
+    volumes:
+      - payment_data:/var/lib/postgresql/data
+  
+  ######################## REVIEW SERVICE ########################
+  mongodbreview:
+    image: mongo:latest
+    container_name: mongodbreview
+    restart: always
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=nguyen_hau
+      - MONGO_INITDB_ROOT_PASSWORD=Hau2004@
+    ports:
+      - '27018:27017'
+    volumes:
+      - mongodb_review_data:/data/db
+    networks:
+      - elk  
+   
+  reviewservice:
+    image: ${DOCKER_REGISTRY-}reviewservice
+    build:
+      # context: src/Services/ReviewService/ReviewService
+      # dockerfile: Dockerfile   
+      context: .
+      dockerfile: src/Services/ReviewService/ReviewService/Dockerfile
+    ports:
+      - '6012:8080'
+      - '6013:8081'
+    volumes:
+      - ./src/Services/ReviewService/ReviewService/https:/https
+    networks:
+      - elk
+    environment:
+      - ConnectionStrings__MongoDb=mongodb://nguyen_hau:Hau2004%40@mongodbreview:27017/ReviewService-Microservices?authSource=admin
+    depends_on:
+      - mongodbreview 
+
+  ######################## NOTIFICATION SERVICE ########################
+  notificationservice:
+    image: ${DOCKER_REGISTRY-}notificationservice
+    build:
+      # context: src/Services/NotificationService/NotificationService
+      # dockerfile: Dockerfile
+      context: .
+      dockerfile: src/Services/NotificationService/NotificationService/Dockerfile
+    ports:
+       - '6014:8080'
+       - '6015:8081'
+    volumes:
+      - ./src/Services/NotificationService/NotificationService/https:/https
+    networks:
+       - elk
+    environment:
+       - ConnectionStrings__MongoDb=mongodb://nguyen_hau:Hau2004%40@mongodbnotification:27017/NotificationService-Microservices?authSource=admin
+       - REDIS_HOST=redisnotification
+       - REDIS_PORT=6379
+       - RabbitMQ__HostName=rabbitmq
+       - RabbitMQ__Username=admin
+       - RabbitMQ__Password=admin
+    depends_on:
+       - mongodbnotification
+       - redisnotification
+       - rabbitmq
+
+  redisnotification:
+    image: redis:latest
+    container_name: redisnotification
+    restart: always
+    ports:
+       - '6380:6379'
+    networks:
+       - elk
+    command: ['redis-server', '--appendonly', 'yes']
+
+  mongodbnotification:
+    image: mongo:latest
+    container_name: mongodbnotification
+    restart: always
+    environment:
+       - MONGO_INITDB_ROOT_USERNAME=nguyen_hau
+       - MONGO_INITDB_ROOT_PASSWORD=Hau2004@
+    ports:
+       - '27019:27017'
+    volumes:
+       - mongodb_notification_data:/data/db
+    networks:
+       - elk
+      
+networks:
+  elk:
+    driver: bridge
+
+volumes:
+  sqlserver_data:
+    driver: local
+  grafana_data:
+    driver: local
+  elasticsearch_data:
+  sqlserver_product_data:
+    driver: local
+  mongodb_order_data:
+    driver: local
+  payment_data:
+  mongodb_review_data:
+    driver: local
+  mongodb_notification_data:
+    driver: local
+
+
+
+
+
